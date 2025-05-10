@@ -1,0 +1,56 @@
+# Python Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django Stuff
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.sqlite3-journal
+
+# Version control
+.git/
+
+# Environment Variables
+# .env
+# *.env
+# env/
+# .env.bak/
+
+# Virtual Environments
+venv/
+.venv/
+
+# Docker & CI/CD Files
+Dockerfile
+docker-compose.yml
+
+# Static and Media Files (if managed outside Docker)
+# staticfiles/
+# media/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+
+# Tests and Coverage Reports
+htmlcov/
+.tox/
+.coverage
+coverage.xml
+.cache/
+.pytest_cache/
+
+# Migrations (Optional: If you prefer to generate them in the container)
+# **/migrations/
+# !**/migrations/__init__.py

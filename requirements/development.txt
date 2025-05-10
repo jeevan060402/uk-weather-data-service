@@ -1,0 +1,29 @@
+-r base.txt
+
+# postgres binary version
+psycopg2-binary==2.9.*
+# django silk
+django-silk==5.3.*
+# linters and formatters
+black
+isort
+ruff
+pylint
+pylint-django
+pylint-plugin-utils
+# security linter
+bandit
+# stubs
+django-stubs
+django-stubs-ext
+djangorestframework-stubs
+openpyxl-stubs
+# types
+mypy
+mypy-extensions
+types-oauthlib
+types-paramiko
+types-psycopg2
+types-pytz
+types-requests
+typing-extensions
