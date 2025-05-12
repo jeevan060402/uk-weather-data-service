@@ -1,0 +1,80 @@
+# Python version required for the project
+[project]
+requires-python = ">=3.12"
+
+# Configuration for the Black code formatter
+[tool.black]
+line-length = 120  # Maximum line length for formatting
+exclude = '''
+/(
+    \.git          # Exclude .git directory
+  | \.hg           # Exclude .hg directory
+  | \.mypy_cache   # Exclude .mypy_cache directory
+  | \.tox          # Exclude .tox directory
+  | \.venv         # Exclude .venv directory
+  | _build         # Exclude _build directory
+  | buck-out       # Exclude buck-out directory
+  | build          # Exclude build directory
+  | dist           # Exclude dist directory
+  | migrations     # Exclude all migrations directories
+  | models\.py     # Exclude all models.py files
+)/
+'''
+
+# Configuration for the isort import sorter
+[tool.isort]
+profile = "black"  # Use Black-compatible import sorting
+
+[tool.pylint.main]
+load-plugins = "pylint_django"
+disable = ["missing-docstring"]  # Example of disabling a rule
+
+[tool.pylint.messages_control]
+disable = ["C0111"]  # Ignore missing docstring warnings
+
+# Configuration for the Ruff linter
+[tool.ruff]
+line-length = 120  # Maximum line length for linting
+exclude = [
+    ".git",  # Exclude .git directory
+    "./env",  # Exclude ./env directory
+    "migrations", # Exclude all migrations directories
+    "models.py"  # Exclude all models.py files
+]
+
+# Detailed configuration for linting rules in Ruff
+[tool.ruff.lint]
+ignore = [
+    "C901",     # Ignore: Function is too complex. Cyclomatic complexity is too high.
+    "E501",     # Ignore: Line too long
+    "E722",     # Ignore: Do not use bare 'except'
+    "E731",     # Ignore: Do not assign a lambda expression, use a def.
+    "F601",     # Ignore: Dictionary key repeated with different values.
+    "UP007",    # Ignore: Use a namedtuple rather than a tuple.
+    "UP032"     # Ignore: Use a dict comprehension.
+]
+select = [
+    "B",        # Select: Pyflakes codes
+    "C4",       # Select: Pylint error codes
+    "C9",       # Select: Error codes for cyclomatic complexity
+    "E",        # Select: PEP8 error codes
+    "F",        # Select: Pyflakes codes
+    "RUF005",   # Select: Custom Ruff codes
+    "RUF013",   # Select: Custom Ruff codes
+    "RUF015",   # Select: Custom Ruff codes
+    "RUF019",   # Select: Custom Ruff codes
+    "T2",       # Select: Custom codes related to type annotations
+    "TRY201",   # Select: Custom codes related to try statements
+    "TRY400",   # Select: Custom codes related to try statements
+    "UP",       # Select: pyupgrade codes
+    "W"         # Select: PEP8 warning codes
+]
+
+# Configuration for McCabe complexity checker in Ruff
+[tool.ruff.lint.mccabe]
+max-complexity = 10  # Maximum allowed complexity for functions
+
+# Per-file ignores for Ruff linting
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Ignore F401: Module import unused
+"./altius/settings.py" = ["T201"]  # Ignore T201: Print found in code

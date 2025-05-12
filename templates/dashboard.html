@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - UK MetOffice Weather Data{% endblock %}
+
+{% block content %}
+<div class="col-12">
+    <div class="container py-4">
+        <h1 class="mb-4 text-center">Weather Data Dashboard</h1>
+        
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Regions</h5>
+                        <p class="card-text display-4" id="regionCount">...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Parameters</h5>
+                        <p class="card-text display-4" id="parameterCount">...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Data Records</h5>
+                        <p class="card-text display-4" id="dataCount">...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Years Covered</h5>
+                        <p class="card-text display-4" id="yearsCovered">...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        UK Annual Temperature Trend
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="temperatureChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        UK Seasonal Temperature Comparison
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="seasonalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        Regional Comparison
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="regionalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fetch summary statistics
+        fetchSummaryStats();
+        
+        // Fetch data for charts
+        fetchAnnualTemperatureData();
+        fetchSeasonalTemperatureData();
+        fetchRegionalComparisonData();
+    });
+    
+    function fetchSummaryStats() {
+        // Fetch region count
+        fetch('/api/v1/regions/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('regionCount').textContent = data.count;
+            })
+            .catch(error => console.error('Error fetching regions:', error));
+        
+        // Fetch parameter count
+        fetch('/api/v1/parameters/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('parameterCount').textContent = data.count;
+            })
+            .catch(error => console.error('Error fetching parameters:', error));
+        
+        // Fetch data count
+        fetch('/api/v1/weather-data/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('dataCount').textContent = data.count;
+                
+                // Extract years from data to calculate years covered
+                const years = new Set();
+                data.results.forEach(item => {
+                    if (item.year) years.add(item.year);
+                });
+                
+                if (years.size > 0) {
+                    const minYear = Math.min(...years);
+                    const maxYear = Math.max(...years);
+                    document.getElementById('yearsCovered').textContent = (maxYear - minYear + 1);
+                }
+            })
+            .catch(error => console.error('Error fetching data count:', error));
+    }
+    
+    function fetchAnnualTemperatureData() {
+        fetch('/api/v1/weather-data/annual/UK/Tmax/')
+            .then(response => response.json())
+            .then(data => {
+                const years = [];
+                const values = [];
+                
+                data.results.forEach(item => {
+                    years.push(item.year);
+                    values.push(item.value);
+                });
+                
+                createLineChart('temperatureChart', 'Annual Mean Maximum Temperature (UK)', years, values);
+            })
+            .catch(error => console.error('Error fetching annual temperature data:', error));
+    }
+    
+    function fetchSeasonalTemperatureData() {
+        fetch('/api/v1/weather-data/seasonal/UK/Tmax/')
+            .then(response => response.json())
+            .then(data => {
+                // Group by season
+                const seasons = {
+                    'win': { label: 'Winter', data: [] },
+                    'spr': { label: 'Spring', data: [] },
+                    'sum': { label: 'Summer', data: [] },
+                    'aut': { label: 'Autumn', data: [] }
+                };
+                
+                // Last 30 years only
+                const currentYear = new Date().getFullYear();
+                const startYear = currentYear - 30;
+                
+                data.results.forEach(item => {
+                    if (item.year >= startYear && seasons[item.period_type]) {
+                        seasons[item.period_type].data.push({
+                            x: item.year,
+                            y: item.value
+                        });
+                    }
+                });
+                
+                createSeasonalChart('seasonalChart', 'Seasonal Temperature Trends (last 30 years)', seasons);
+            })
+            .catch(error => console.error('Error fetching seasonal data:', error));
+    }
+    
+    function fetchRegionalComparisonData() {
+        // Fetch region list first
+        fetch('/api/v1/regions/')
+            .then(response => response.json())
+            .then(regionsData => {
+                const regions = regionsData.results.slice(0, 5); // First 5 regions
+                const datasets = [];
+                let fetchCount = 0;
+                
+                regions.forEach(region => {
+                    // Fetch each region's annual data
+                    fetch(`/api/v1/weather-data/annual/${region.code}/Tmax/`)
+                        .then(response => response.json())
+                        .then(data => {
+                            // Get only most recent 10 years of data
+                            const filteredData = data.results
+                                .sort((a, b) => b.year - a.year)
+                                .slice(0, 10)
+                                .reverse();
+                            
+                            const regionData = {
+                                label: region.name,
+                                data: filteredData.map(item => item.value),
+                                borderColor: getRandomColor(),
+                                fill: false
+                            };
+                            
+                            datasets.push(regionData);
+                            fetchCount++;
+                            
+                            // When all data is fetched, create the chart
+                            if (fetchCount === regions.length) {
+                                createRegionalChart('regionalChart', 'Regional Temperature Comparison (last 10 years)', 
+                                                   filteredData.map(item => item.year), datasets);
+                            }
+                        })
+                        .catch(error => console.error(`Error fetching data for ${region.code}:`, error));
+                });
+            })
+            .catch(error => console.error('Error fetching regions:', error));
+    }
+    
+    function createLineChart(canvasId, title, labels, data) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: title,
+                    data: data,
+                    borderColor: 'rgb(75, 192, 192)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: title
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Year'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function createSeasonalChart(canvasId, title, seasons) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        
+        const datasets = Object.values(seasons).map(season => {
+            return {
+                label: season.label,
+                data: season.data,
+                borderColor: getRandomColor(),
+                fill: false
+            };
+        });
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: title
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        }
+                    },
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: 'Year'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function createRegionalChart(canvasId, title, labels, datasets) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: title
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Year'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      # Persistent volume for SQLite database
+      - sqlite_data:/app/db
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      # Ensure SQLite database path is persistent
+      - DATABASE_URL=sqlite:////app/db.sqlite3
+
+volumes:
+  sqlite_data:
