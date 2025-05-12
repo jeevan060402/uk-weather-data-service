@@ -65,6 +65,8 @@ Thumbs.db
 .devcontainer
 
 venv
+backend-*
+db.sqlite*
 .hypothesis/
 Events_Navigator
 altius/positions.yaml

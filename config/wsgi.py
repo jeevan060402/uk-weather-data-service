@@ -12,14 +12,12 @@ import os
 from django.core.wsgi import get_wsgi_application
 from dotenv import load_dotenv
 
-from config.tracing import load_traces
-
 load_dotenv()
 
 try:
     ENABLE_TRACING = os.environ.get("ENABLE_TRACING")
     if ENABLE_TRACING == "True":
-        load_traces()
+        pass
 except:
     pass
 

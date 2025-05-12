@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - UK MetOffice Weather Data{% endblock %}
+
+{% block content %}
+<div class="col-12">
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h1 class="text-center mb-4">UK MetOffice Weather Data</h1>
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h2 class="card-title">Welcome to the UK Weather Data Portal</h2>
+                        <p class="card-text">
+                            This application provides access to historical weather data from the UK MetOffice,
+                            including temperature, rainfall, and sunshine statistics for various regions across
+                            the United Kingdom.
+                        </p>
+                        
+                        <div class="row mb-4 mt-5">
+                            <div class="col-md-4">
+                                <div class="card text-center mb-4">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Dashboard</h5>
+                                        <p class="card-text">View summary statistics and key visualizations of UK weather data.</p>
+                                        <a href="{% url 'dashboard' %}" class="btn btn-primary">View Dashboard</a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card text-center mb-4">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Data Explorer</h5>
+                                        <p class="card-text">Explore and visualize historical weather data by region and parameter.</p>
+                                        <a href="{% url 'data_explorer' %}" class="btn btn-primary">Explore Data</a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card text-center mb-4">
+                                    <div class="card-body">
+                                        <h5 class="card-title">API Access</h5>
+                                        <p class="card-text">Programmatically access weather data through our RESTful API.</p>
+                                        <a href="/api/v1/" class="btn btn-primary">API Documentation</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h3 class="mt-4">Available Data</h3>
+                        <p>
+                            The database currently contains the following data:
+                        </p>
+                        <ul>
+                            <li><strong>Regions:</strong> <span id="regionCount">Loading...</span></li>
+                            <li><strong>Parameters:</strong> <span id="parameterCount">Loading...</span></li>
+                            <li><strong>Data Records:</strong> <span id="dataCount">Loading...</span></li>
+                            <li><strong>Last Updated:</strong> <span id="lastUpdated">Loading...</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Fetch data counts from API
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fetch region count
+        fetch('/api/v1/regions/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('regionCount').textContent = data.count;
+            })
+            .catch(error => {
+                document.getElementById('regionCount').textContent = 'Error loading';
+                console.error('Error fetching region count:', error);
+            });
+        
+        // Fetch parameter count
+        fetch('/api/v1/parameters/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('parameterCount').textContent = data.count;
+            })
+            .catch(error => {
+                document.getElementById('parameterCount').textContent = 'Error loading';
+                console.error('Error fetching parameter count:', error);
+            });
+        
+        // Fetch data count
+        fetch('/api/v1/weather-data/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('dataCount').textContent = data.count;
+            })
+            .catch(error => {
+                document.getElementById('dataCount').textContent = 'Error loading';
+                console.error('Error fetching data count:', error);
+            });
+        
+        // Set last updated
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
+    });
+</script>
+{% endblock %}

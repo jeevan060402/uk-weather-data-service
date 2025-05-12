@@ -1,66 +1,34 @@
-# Define Base Image
-FROM python:3.12-slim-bookworm AS base
+FROM python:3.11-slim AS base
 
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=on \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_ROOT_USER_ACTION=ignore
 
-# ---- Python Build Stage ----
-FROM base AS python-build-stage
+# Set working directory
+WORKDIR /app
 
-
-# Install system dependencies required for building
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    # dependencies for building Python packages
-    build-essential \
-    gcc \
-    libpq-dev \
-    python3-dev
-
-
-# Copy dependency files
-COPY requirements.txt ./
-COPY requirements ./requirements
-
-# Create Python Dependency and Sub-Dependency Wheels.
-RUN pip wheel --wheel-dir /usr/src/app/wheels  \
-    -r requirements.txt
-
-
-# ---- Final Stage ----
-FROM base AS final
-
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-
-WORKDIR /project/
-
-# copy code
-COPY . /project/
-
-# make scripts executable
-RUN chmod +x /project/scripts/*
-
-# Install system dependencies required for running
-RUN apt-get update && apt-get install --no-install-recommends -y \
-    cron \
-    # Postgres client Runtime Dependencies
-    libpq5 \
-    # system monitoring
-    procps \
-    # cleaning up unused files
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+# Install system dependencies (only what’s needed)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libpq-dev \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy only requirements to leverage caching
+COPY requirements/ requirements/
 
-# All absolute dir copies ignore workdir instruction. All relative dir copies are wrt to the workdir instruction
-# copy python dependency wheels from python-build-stage
-COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
+# Install Python dependencies
+RUN pip install --upgrade pip \
+    && pip install -r requirements/development.txt
 
-# use wheels to install python dependencies
-RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \
-    && rm -rf /wheels/
+# Copy the rest of the project
+COPY . .
 
-
-# Expose port
+# Expose port 8000
 EXPOSE 8000
 
-# Run the application
-CMD ["/project/scripts/start.sh"]
+# Command to start server
+# CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi.application"]
+CMD ["python", "manage.py", "runserver"]

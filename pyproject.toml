@@ -5,7 +5,6 @@ requires-python = ">=3.12"
 # Configuration for the Black code formatter
 [tool.black]
 line-length = 120  # Maximum line length for formatting
-target-version = ["py38"]  # Target Python version
 exclude = '''
 /(
     \.git          # Exclude .git directory

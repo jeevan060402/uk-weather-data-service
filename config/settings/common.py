@@ -2,8 +2,6 @@ import logging
 import os
 from datetime import timedelta
 from pathlib import Path
-
-from azure.identity import DefaultAzureCredential
 from corsheaders.defaults import default_headers
 
 from config.docs import *  # noqa: F403
@@ -20,7 +18,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 ##############################
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = True if os.environ.get("DEBUG", "True") == "True" else False
-ENABLE_TRACING = True if os.environ.get("ENABLE_TRACING", "True") == "True" else False
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 
@@ -47,6 +44,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Internal Apps
     "db",
+    "weather_api",
+    "web_app",
     # Third Party
     "rest_framework",
     "rest_framework.authtoken",
@@ -55,7 +54,6 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "django_filters",
-    "storages",
     "django_structlog",
     # health checks
     "health_check",  # required
@@ -80,7 +78,6 @@ MIDDLEWARE = [
     "django_structlog.middlewares.RequestMiddleware",
 ]
 
-
 #############################
 #        TEMPLATES          #
 #############################
@@ -104,109 +101,49 @@ TEMPLATES = [
 #############################
 #        DATABASES          #
 #############################
+# For postgre
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": os.environ.get("POSTGRES_DB_NAME"),
+#         "USER": os.environ.get("POSTGRES_DB_USER"),
+#         "PASSWORD": os.environ.get("POSTGRES_DB_PASSWORD"),
+#         "HOST": os.environ.get("POSTGRES_DB_HOST"),
+#         "PORT": os.environ.get("POSTGRES_DB_PORT"),
+#         "OPTIONS": (
+#             {}
+#             if os.environ.get("POSTGRES_DB_SSL_ENABLED", "False") == "False"
+#             else {"sslmode": "verify-full", "sslrootcert": "./postgresql_ssl_cert.pem"}
+#         ),
+#     }
+# }
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB_NAME"),
-        "USER": os.environ.get("POSTGRES_DB_USER"),
-        "PASSWORD": os.environ.get("POSTGRES_DB_PASSWORD"),
-        "HOST": os.environ.get("POSTGRES_DB_HOST"),
-        "PORT": os.environ.get("POSTGRES_DB_PORT"),
-        "OPTIONS": (
-            {}
-            if os.environ.get("POSTGRES_DB_SSL_ENABLED", "False") == "False"
-            else {"sslmode": "verify-full", "sslrootcert": "./postgresql_ssl_cert.pem"}
-        ),
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-}
-
-#############################
-#       AZURE CREDS         #
-#############################
-USE_MANAGED_IDENTITY = True if os.environ.get("USE_MANAGED_IDENTITY", "False") == "True" else False
-# Azure Blob storage account
-AZURE_ACCOUNT_NAME = os.environ.get("AZURE_ACCOUNT_NAME")
-AZURE_STORAGE_ACCOUNT_NAME_SFTP = os.environ.get("AZURE_STORAGE_ACCOUNT_NAME_SFTP")
-# Azure Blob storage container
-AZURE_CONTAINER = os.environ.get("AZURE_CONTAINER")
-AZURE_PUBLIC_CONTAINER = os.environ.get("AZURE_PUBLIC_CONTAINER")
-# authentication settings should be removed in future
-AZURE_ACCOUNT_KEY = os.environ.get("AZURE_ACCOUNT_KEY")
-AZURE_STORAGE_ACCOUNT_KEY_SFTP = os.environ.get("AZURE_STORAGE_ACCOUNT_KEY_SFTP")
-# Optional
-AZURE_URL_EXPIRATION_SECS = 3600
-
-
-########################################
-#       AZURE SERVICEBUS CREDS         #
-########################################
-AZURE_SERVICE_BUS_NAMESPACE = os.environ.get("AZURE_SERVICE_BUS_NAMESPACE")
-AZURE_SERVICE_BUS_QUEUE = os.environ.get("AZURE_SERVICE_BUS_QUEUE")
-
-
-#############################
-#       STORAGE ENGINE      #
-#############################
-STORAGES = {
-    "default": {
-        "BACKEND": "config.storages.CustomAzureStorage",
-        "OPTIONS": {
-            "account_name": AZURE_ACCOUNT_NAME,
-            "azure_container": AZURE_CONTAINER,
-            "account_key": AZURE_ACCOUNT_KEY if not USE_MANAGED_IDENTITY else None,
-            "token_credential": DefaultAzureCredential() if USE_MANAGED_IDENTITY else None,
-        },
-    },
-    "staticfiles": {  # Static files
-        "BACKEND": "config.storages.CustomAzureStorage",
-        "OPTIONS": {
-            "account_name": AZURE_ACCOUNT_NAME,
-            "azure_container": AZURE_PUBLIC_CONTAINER,
-            "account_key": AZURE_ACCOUNT_KEY if not USE_MANAGED_IDENTITY else None,
-            "token_credential": DefaultAzureCredential() if USE_MANAGED_IDENTITY else None,
-            "expiration_secs": None,
-            "location": "static",  # Folder prefix for static files
-        },
-    },
 }
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 4294967296  # 4GB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 4294967296  # 4GB
 
-
 #############################
 #       STATIC FILES        #
 #############################
-STATIC_URL = f"https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/static/"
-
-
-#############################
-#       MEDIA FILES         #
-#############################
-MEDIA_URL = f"https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/"
-
-
-##############################
-#      EMAIL SETTINGS        #
-##############################
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# server settings
-EMAIL_HOST = os.environ.get("EMAIL_HOST")
-EMAIL_PORT = os.environ.get("EMAIL_PORT")
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-# Authentication settings
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-# Default sender settings
-DEFAULT_FROM_EMAIL = os.environ.get("EMAIL_HOST_USER")
-EMAIL_INTERCEPTOR = os.environ.get("EMAIL_INTERCEPTOR")
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
 ########################################
 #       REST FRAMEWORK SETTINGS        #
 ########################################
 REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100,
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
@@ -264,32 +201,6 @@ CORS_EXPOSE_HEADERS = [
 ]
 
 
-################################
-# EMAIL SERVICE CONFIGURATION  #
-################################
-ENABLE_EMAIL = True if os.environ.get("ENABLE_EMAIL", "False") == "True" else False
-FRONTEND_LOGIN_URL = os.environ.get("FRONTEND_LOGIN_URL")
-AZURE_EMAIL_URL = os.environ.get("AZURE_EMAIL_URL")
-AZURE_EMAIL_KEY = os.environ.get("AZURE_EMAIL_KEY")
-AZURE_EMAIL_HOST = os.environ.get("AZURE_EMAIL_HOST")
-EMAIL_INTERCEPTOR = os.environ.get("EMAIL_INTERCEPTOR")
-
-
-##############################################
-#         SYSTEM ADMIN INSTANCE INFO         #
-##############################################
-SYSTEM_ADMIN_BASE_URL = os.environ.get("SYSTEM_ADMIN_BASE_URL")
-SYSTEM_ADMIN_TOKEN = os.environ.get("SYSTEM_ADMIN_TOKEN")
-SYSTEM_ADMIN_CLIENT_ID = os.environ.get("SYSTEM_ADMIN_CLIENT_ID")
-
-
-##############################
-#     L4 INSTANCE INFO       #
-##############################
-ALTIUSHUB_INTEGRATION_BASE_URL = os.environ.get("ALTIUSHUB_INTEGRATION_BASE_URL")
-ALTIUSHUB_INTEGRATION_KEY = os.environ.get("ALTIUSHUB_INTEGRATION_KEY")
-
-
 ###############################
 #     DOCKER IMAGE INFO       #
 ###############################
@@ -302,3 +213,8 @@ DOCKER_IMAGE_TAG = os.environ.get("DOCKER_IMAGE_TAG")
 #############################
 DJANGO_STRUCTLOG_STATUS_4XX_LOG_LEVEL = logging.INFO
 DJANGO_STRUCTLOG_USER_ID_FIELD = "id"
+
+#############################
+#     MetOffice Base URL    #
+#############################
+METOFFICE_BASE_URL = 'https://www.metoffice.gov.uk/pub/data/weather/uk/climate/datasets/'

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.urls import include, path
+from django.contrib import admin
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -7,6 +8,15 @@ from drf_spectacular.views import (
 )
 
 urlpatterns = [
+    ###############################
+    #          ADMIN V1          #
+    ###############################
+    path('admin/', admin.site.urls),
+    ###############################
+    #         API V1             #
+    ###############################
+    path("api/v1/", include("weather_api.urls")),
+    path("api/v1/webapp/", include("web_app.urls")),
     ###############################
     #         HEALTH CHECK        #
     ###############################

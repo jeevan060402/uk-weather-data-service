@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    volumes:
+      # Persistent volume for SQLite database
+      - sqlite_data:/app/db
+    ports:
+      - "80:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      # Ensure SQLite database path is persistent
+      - DATABASE_URL=sqlite:////app/db.sqlite3
+
+volumes:
+  sqlite_data:

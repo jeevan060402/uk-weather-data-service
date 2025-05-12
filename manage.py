@@ -5,7 +5,6 @@ import sys
 
 from dotenv import load_dotenv
 
-from config.tracing import load_traces
 
 load_dotenv()
 
@@ -15,15 +14,8 @@ def main():
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 
     print("############################ DATABASES ############################")
-    print(f"PostgreSQL: {os.environ.get('POSTGRES_DB_NAME')}")
+    print(f"SQLite: {os.environ.get('SQLite_DB_NAME')}")
     print("###################################################################")
-
-    try:
-        ENABLE_TRACING = os.environ.get("ENABLE_TRACING")
-        if ENABLE_TRACING == "True":
-            load_traces()
-    except:
-        pass
 
     try:
         from django.core.management import execute_from_command_line
